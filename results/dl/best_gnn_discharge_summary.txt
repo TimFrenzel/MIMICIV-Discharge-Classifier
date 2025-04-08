@@ -1,0 +1,21 @@
+=== Best-Effort RGCN + Knowledge Graph (Discharge) ===
+
+Strategies:
+  1) 70/15/15 node-level split (train/val/test)
+  2) Standard scaling of numeric features
+  3) Deeper & wider RGCN (3 layers, 128 hidden, 0.4 dropout)
+  4) Threshold search + early stopping
+
+Homogeneous Graph => 79978 nodes, 260100 edges
+Train: 55978 | Val: 11995 | Test: 11996
+
+Best threshold on val: 0.300
+Final TEST => AUC=0.7782, F1=0.8072
+Confusion matrix:
+[[1525 2705]
+ [ 680 7086]]
+Artifacts:
+  knowledge_graph.gexf
+  knowledge_graph.png
+  best_gnn_confusion_matrix.png
+  best_gnn_roc.png

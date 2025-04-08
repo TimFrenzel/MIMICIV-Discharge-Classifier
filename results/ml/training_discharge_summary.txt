@@ -1,0 +1,40 @@
+=== Discharge Classification Model Training Summary ===
+
+--- Dataset Information ---
+Total samples: 79969
+Training set: 63860 (79.9%)
+Testing set: 16109 (20.1%)
+Non-Home Discharge Rate (train): 65.18%
+Non-Home Discharge Rate (test): 66.64%
+
+--- Feature Information ---
+Number of features: 273
+
+--- Model Performance ---
+Logistic Regression:
+  AUC: 0.8506 (95% CI: 0.8457-0.8576)
+  F1 Score: 0.8135 (95% CI: 0.8086-0.8202)
+  Precision: 0.8784
+  Recall: 0.7575
+  Average Precision: 0.9154
+
+XGBoost:
+  AUC: 0.9026 (95% CI: 0.8975-0.9069)
+  F1 Score: 0.8591 (95% CI: 0.8548-0.8630)
+  Precision: 0.7765
+  Recall: 0.9612
+  Average Precision: 0.9503
+
+LightGBM:
+  AUC: 0.9001 (95% CI: 0.8949-0.9052)
+  F1 Score: 0.8488 (95% CI: 0.8428-0.8556)
+  Precision: 0.9135
+  Recall: 0.7926
+  Average Precision: 0.9487
+
+Best performing model: XGB (AUC: 0.9026)
+
+Total runtime: 738.00 seconds (12.30 minutes)
+Hardware configuration: 16 CPU cores, GPU acceleration: Disabled
+SMOTE oversampling: Disabled
+Correlation threshold: 0.9
