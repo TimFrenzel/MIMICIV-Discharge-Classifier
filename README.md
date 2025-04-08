@@ -1,130 +1,139 @@
 # Discharge Destination Classification Using MIMIC-IV FHIR Data
 
 ## Abstract
-Discharge planning is an important component of patient care, though clinicians often make decisions about home vs. non-home discharge based on incomplete data or subjective judgment. This repository presents a **hybrid approach** incorporating both **tabular machine learning pipelines** and a **Relational Graph Convolutional Network (R-GCN)** to predict discharge destinations. Using the **MIMIC-IV** database (structured in **FHIR** format), our models draw from vital signs, lab tests, medications, diagnoses, and demographic details to forecast if a patient will return home or transition to a rehab/skilled nursing facility.
+Effective discharge planning significantly influences patient outcomes, yet clinical decisions often rely on incomplete data or subjective judgment. This research introduces an innovative hybrid predictive modeling framework combining classical tabular machine learning methods (Logistic Regression, XGBoost, LightGBM) and an advanced Relational Graph Convolutional Network (R-GCN) leveraging structured healthcare data from the MIMIC-IV FHIR dataset. Utilizing demographics, vital signs, medications, diagnoses, and laboratory tests, this study forecasts whether patients will be discharged home or require additional care in skilled nursing or rehabilitation facilities.
 
-Contrary to conventional readmission or length-of-stay predictions, this classification task focuses on **disposition to non-home** settings, addressing a practical need for **efficient resource allocation** and earlier interventions. The project’s **tabular ML** pipelines (Logistic Regression, XGBoost, and LightGBM) outperform the **R-GCN** in raw AUC, though the **knowledge graph approach** shows the potential of **graph-structured data** to reflect multi-relational healthcare insights. By integrating **SHAP interpretability**, class weighting, and patient-level cross-validation, we aim to present a consistent and **clear** discharge outcome modeling pipeline.
+Contrary to conventional models focusing solely on readmission risk, this research addresses the critical clinical decision point of discharge disposition, which impacts resource allocation and patient management. Classical ML models demonstrated strong predictive performance (AUC ~0.90), with SHAP interpretability validating clinical relevance. The R-GCN model provided moderate predictive power (AUC ~0.78), offering valuable insights into relational structures inherent in patient care trajectories. Together, these approaches underscore the utility of hybrid modeling to enhance clinical decisions through accurate and interpretable predictions.
 
 ---
 
 ## Project Objectives
-1. **Develop a Binary Classification Model**  
-   Determine whether a patient will be discharged **home** vs. a **non-home** facility (skilled nursing, rehab, hospice).
+1. **Design a Clinically Relevant Binary Classification Model**  
+   Accurately predict patient discharge to home versus non-home settings (rehabilitation, skilled nursing).
 
-2. **Explore Tabular vs. Graph Approaches**  
-   Compare traditional ML pipelines (Logistic Regression, XGBoost, LightGBM) with a **Graph Neural Network** (R-GCN) to determine which paradigm best captures patient complexity.
+2. **Investigate Complementary Strengths of Tabular vs. Graph-Based ML**  
+   Evaluate traditional machine learning pipelines against relational graph models to understand their respective capabilities in capturing patient complexity.
 
 3. **Enhance Clinical Interpretability**  
-   Integrate explainability tools, including **SHAP** for tabular models and **attention/embedding analysis** for the graph model, to empower data-driven, clinically meaningful insights.
+   Employ explainability tools such as SHAP for classical ML and embedding analysis for R-GCN, facilitating clinically meaningful insights.
 
-4. **Demonstrate Scalable Data Processing**  
-   Implement a multi-phase data integration pipeline using **DuckDB** and feature engineering techniques that easily extend to other EHR datasets.
+4. **Demonstrate Advanced Data Engineering and Integration Skills**  
+   Utilize robust data integration (DuckDB, SQL, PyTorch Geometric) for scalable and reproducible analysis adaptable to other EHR datasets.
 
 ---
 
 ## System Requirements & Dataset Considerations
 
 ### MIMIC-IV on FHIR
-- **Data Source**: MIMIC-IV (PhysioNet) structured in HL7 FHIR format  
-- **Key Profiles**: Encounters, Conditions, Observations (Labs), MedicationAdministration  
-- **Access Requirements**: Due to **HIPAA** and data use agreements, MIMIC-IV must be requested independently via PhysioNet. This repo does **not** distribute raw data.
+- **Data Source**: PhysioNet’s MIMIC-IV structured in HL7 FHIR format.  
+- **Key Profiles**: Encounters, Conditions, Observations (Labs), MedicationAdministration.  
+- **Access Requirements**: Independently obtain from PhysioNet due to HIPAA and data use agreements. Raw data distribution prohibited.
 
-### Local Execution & GPU Support
-- **Local GPU** (CUDA recommended) for faster training of R-GCN layers and complex ML ensembles.  
-- **CPU Execution**: Possible but slower. Batch size and parallelism must be tuned accordingly.
+### Computational Environment
+- **Local GPU** recommended (CUDA support) for efficient R-GCN and complex ensemble training.  
+- **CPU Execution**: Supported but significantly slower; requires batch size adjustments.
 
 ### Data Volume & Integration
-- **File Sizes**:  
-  - Original MIMIC-IV FHIR NDJSON: Several GB compressed  
-  - DuckDB database (`mimic_data.db`): ~2–3GB after merging  
-- **Preprocessing**: Missing-value handling, frequency-based feature selection (top lab tests, medications), numeric standardization.
+- Original MIMIC-IV FHIR NDJSON: Several GB compressed.  
+- DuckDB database (`mimic_data.db`): Approximately 2–3GB post-merging.  
+- Data preprocessing includes missing-value imputation, frequency-based feature selection, and numeric standardization.
+
+---
+
+## Project Workflow Overview
+
+The following diagram outlines the complete workflow used in my project, from initial data extraction and preprocessing to modeling, evaluation, and interpretation. It visually summarizes the integration of the machine learning pipelines and the R-GCN.
+
+![MIMIC-IV Discharge Destination Prediction Workflow](workflow.png)
 
 ---
 
 ## Methodological Framework
+This project demonstrates sophisticated data engineering and novel feature construction methods vital for robust ML/DL modeling in healthcare:
 
 ### 1. Multi-phase Data Pipeline
 1. **Extraction & Relational Linking**  
-   - **DuckDB** merges encounter, patient, condition, and medication data.  
-   - Primary keys (patient ID, encounter ID) ensure correct alignment of clinical events.
+   - Integrated encounter, patient, condition, medication data via DuckDB.  
+   - Ensured alignment through primary keys (patient ID, encounter ID).
 
 2. **Feature Engineering**  
-   - **Lab Tests** (min, max, last) across top 50 codes  
-   - **Medication Flags** for high-frequency drugs  
-   - **Demographics** (age, gender, ethnicity)  
-   - **Encounter Details** (season of admission, length of stay, comorbidity counts)
+   - **Lab Events**: Min, max, last measurements across key labs (creatinine, hemoglobin).  
+   - **Medication Flags**: Binary indicators for frequently administered drugs.  
+   - **Demographics**: Age at admission, race, gender, admission type.  
+   - **Encounter Attributes**: Length of stay, comorbidity counts.
 
 3. **Label Definition**  
-   - `disposition_binary` = **1** for non-home discharge, **0** for home discharge.
+   - Binary outcome (`disposition_binary`): 1 (non-home), 0 (home discharge).
 
 4. **Partitioning & Cross-Validation**  
-   - **Patient-level** split avoids data leakage across admissions of the same patient.  
-   - **GroupKFold** ensures robust sampling for hyperparameter tuning.
+   - Patient-level split with GroupKFold to prevent data leakage.
 
 ---
 
 ## Exploratory Data Analysis & Interpretability
 
 ### Patient Journey Example
-To illustrate how real-world patient trajectories can span multiple admissions and involve complex clinical transitions:
+Illustrates complexity in patient trajectories, highlighting transitions influencing discharge planning:
 
 ![Patient Journey Example](results/EDA/patient_journey_example.png)
 
-This example highlights how patients initially admitted for one condition may accumulate new diagnoses or medications, ultimately influencing their discharge plan.
+### EDA Observations
+- Older adults frequently transitioned to non-home facilities.  
+- High medication counts and abnormal lab values correlated with complex discharges.
 
-### 1. EDA Observations
-- **Older Adults** more frequently discharged to non-home facilities.  
-- **High Medication Counts** or **unusual lab values** correlated with complex discharges.  
-- Some patients show **long stays** and **multiple comorbidities** leading to rehab or skilled nursing.
-
-### 2. SHAP Analysis (Tabular)
-For the LightGBM model, **SHAP** helps uncover which features (e.g., age, lab aggregates, medications) push predictions toward non-home vs. home discharges.
+### SHAP Analysis (Tabular Models)
+SHAP revealed age, comorbidities, medication usage, and lab anomalies as influential in predicting discharge outcomes:
 
 ![SHAP Summary for LightGBM](results/ml/shap_summary_lightgbm.png)
 
-Positive SHAP values (pink) indicate a higher probability of non-home discharge, whereas negative values (blue) nudge the prediction toward home.
-
 ---
 
-## ML Pipeline (Tabular Models)
-We train and evaluate **Logistic Regression**, **XGBoost**, and **LightGBM** to handle diverse patterns in EHR data:
+## Classical Machine Learning Pipelines
+Detailed exploration of Logistic Regression, XGBoost, and LightGBM models:
 
-- **Hyperparameter Tuning**: Randomized search with `roc_auc` scoring  
-- **Training Strategy**: Balanced weighting for moderate class imbalance; patient-level GroupKFold  
-- **Interpretability**: SHAP for feature importances
+- **Logistic Regression**: Tuned regularization, balanced class weighting; AUC ~0.85, precision ~0.88, recall ~0.76.
+- **XGBoost**: Tree-based, optimized via RandomizedSearchCV; best AUC ~0.90, high recall ~0.96.
+- **LightGBM**: Dart boosting, balanced performance with AUC ~0.90, precision ~0.91.
 
-### Key Tabular Findings
-- **XGBoost** typically achieves the highest **AUC** (~0.90+), capturing a high recall for non-home discharges.  
-- **Logistic Regression** is notably interpretable with moderate AUC (~0.85).  
-- **LightGBM** offers a strong balance of performance and fewer hyperparameters.
-
-#### ROC Comparison
-The following plot showcases how each model performs in separating home vs. non-home discharges:
+### ROC Comparison
+Performance summary:
 
 ![ROC Comparison for Discharge Models](results/ml/roc_comparison_discharge.png)
-
-XGBoost exhibits the highest discriminative power, while Logistic Regression and LightGBM closely follow.
 
 ---
 
 ## Relational Graph Convolutional Network (R-GCN)
 
 ### Model Architecture
-- **Graph Nodes**: Encounters, Conditions, Medications  
-- **Edges**: (Encounter → Condition), (Encounter → Medication), (Encounter → Encounter)  
-- **3-layer R-GCN** with dropout and weighted BCE loss for class imbalance
+- Nodes: Encounters, Conditions, Medications; Edges represent clinical relationships.
+- Deep architecture: 3 RGCNConv layers, hidden_dim=128, dropout=0.4, class imbalance mitigation via weighted loss.
 
 ![Knowledge Graph Overview](results/dl/knowledge_graph.png)
 
-While the R-GCN captures relational context (e.g., frequently co-occurring diagnoses, sequential admissions), its raw AUC (~0.78) is lower than the best tabular models. Future enhancements could improve embedding richness and multi-relational learning.
+### Performance
+- AUC ~0.78, F1 ~0.81 at threshold=0.30. Notably, the graph model captured complex relational contexts despite lower overall AUC compared to classical ML.
+
+---
+
+## Key Domain Insights
+- **Age & Comorbidities**: Strong predictors aligning with clinical expectations.
+- **Medication Intensities**: Multiple or high-risk medications associated with non-home transitions.
+- **Lab Extremes**: Abnormal lab values correlated with increased non-home discharges.
+
+---
+
+## Broader Evaluation & Takeaways
+- **Model Comparisons**: XGBoost provided highest predictive performance; Logistic Regression ensured interpretability; LightGBM balanced precision and recall.
+- **GNN Feasibility**: Demonstrated value in capturing relational complexities but required additional refinement.
+- **Interpretability**: SHAP insights validated clinically relevant predictors, highlighting actionable features for targeted clinical interventions.
 
 ---
 
 ## Limitations & Future Directions
-- **Single-Site Data**: MIMIC-IV from one institution may limit broader generalizability.  
-- **Graph Model Performance**: R-GCN’s AUC lags behind simpler ML approaches. Integrating multi-task objectives or deeper graph embeddings may help.  
-- **Temporal Sequencing**: More refined time-series patterns (sub-encounter granularity) could improve predictive accuracy.  
-- **Data Gaps**: Missing or delayed documentation can skew certain features or lab aggregates.
+- **Generalizability**: Multi-site validation needed.
+- **Graph Embeddings**: Potential improvement through advanced relational embedding techniques.
+- **Time-Series Granularity**: Enhanced temporal resolution could further improve predictions.
+- **Data Completeness**: Addressing data gaps through advanced imputation strategies.
 
 ---
 
@@ -140,13 +149,5 @@ For dataset access and compliance, refer to the [PhysioNet MIMIC-IV database](ht
 
 ---
 
-## References
-1. **MIMIC-IV on FHIR** – PhysioNet.
-2. Alsentzer, E. et al. (2019). *ClinicalBERT: Modeling clinical notes and predicting hospital readmission*.  
-3. Choi, E. et al. (2016). *Multi-layer representation learning for medical concepts*.  
-
----
-
 ## License
-- **MIT License**: This project is open-sourced under the MIT License for broad applicability.  
-- **PhysioNet DUA**: Researchers must independently obtain MIMIC-IV data from PhysioNet under the appropriate Data Use Agreement.
+- **MIT License**: Open-sourced for broad academic and practical applicability.
